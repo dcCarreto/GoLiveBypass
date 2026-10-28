@@ -10,6 +10,10 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **Experimento (desligado por padrão): abrir o Discord com `--disable-quic` no Windows.** Para separar uma das hipóteses do envio de arquivo que "carrega e some" (#368, #369, #370, #373), que aparece em rotas do México e some ao trocar de rota enquanto o log do WireSock mostra o túnel saudável. Com `"experimentalDesativarQuic": true` no `settings.json` (`%LOCALAPPDATA%\GoLiveBypass\settings.json`), a GUI passa `--disable-quic` ao Discord em toda abertura (ativação, troca de rota, reinício), forçando HTTP/2 sobre TCP em vez de HTTP/3 sobre UDP. Sem a chave, o Discord abre exatamente como antes. A lista de argumentos é fechada: só esse parâmetro, e só com o valor booleano `true` (nem `"true"`, nem `1`); nenhuma outra chave do `settings.json` vira argumento. O relatório ganha `discord_quic` (`padrao` ou `desativado_experimental`) para saber em qual condição cada relato foi gerado. Não é uma correção: é um teste para quem reproduz o travamento. Só vale onde a GUI abre o Discord pelo executável (Windows).
 
+### Corrigido
+
+- **Log da GUI: a taxa do túnel (`rx_taxa_kbps`/`tx_taxa_kbps`) não sai mais dobrada nem negativa.** O diagnóstico lê os contadores do WireGuard a cada 45 s e dividia a diferença sempre por 45 s. Quando uma leitura falha ou é pulada porque a anterior ainda não terminou (comum no Linux, onde a leitura passa pelo script elevado), a diferença cobre 90 s e a taxa saía dobrada; com o túnel reiniciado no meio, os contadores voltam a zero e a taxa saía negativa. Isso enganava a leitura dos relatos ("o upload dobrou", "o upload caiu"). A taxa agora usa o tempo real entre as duas leituras, e uma leitura com contador menor que o anterior sai sem taxa (os totais continuam no log). Só o diagnóstico muda; o túnel não é afetado.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado
