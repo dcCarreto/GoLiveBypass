@@ -10,6 +10,10 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **Experimento (desligado por padrão): abrir o Discord com `--disable-quic` no Windows.** Para separar uma das hipóteses do envio de arquivo que "carrega e some" (#368, #369, #370, #373), que aparece em rotas do México e some ao trocar de rota enquanto o log do WireSock mostra o túnel saudável. Com `"experimentalDesativarQuic": true` no `settings.json` (`%LOCALAPPDATA%\GoLiveBypass\settings.json`), a GUI passa `--disable-quic` ao Discord em toda abertura (ativação, troca de rota, reinício), forçando HTTP/2 sobre TCP em vez de HTTP/3 sobre UDP. Sem a chave, o Discord abre exatamente como antes. A lista de argumentos é fechada: só esse parâmetro, e só com o valor booleano `true` (nem `"true"`, nem `1`); nenhuma outra chave do `settings.json` vira argumento. O relatório ganha `discord_quic` (`padrao` ou `desativado_experimental`) para saber em qual condição cada relato foi gerado. Não é uma correção: é um teste para quem reproduz o travamento. Só vale onde a GUI abre o Discord pelo executável (Windows).
 
+### Corrigido
+
+- **Relatório de bug da GUI: um erro repetido não expulsa mais o contexto do log.** O buffer em memória (as 1000 linhas mais recentes, que vão no relatório) deveria juntar repetições seguidas numa linha `(xN)`, mas comparava a linha inteira, que começa pela hora: só juntava o que caía no mesmo segundo. Um erro repetido a cada poucos segundos ocupava uma linha por ocorrência e, em alguns minutos, empurrava para fora tudo o que tinha acontecido antes. A comparação agora ignora a hora, e a linha agrupada mostra a primeira e a última ocorrência: `[12:00:00] [error][net] socks.falha (x120, ate 12:01:59)`. O arquivo `gui.log` continua com todas as linhas.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado
