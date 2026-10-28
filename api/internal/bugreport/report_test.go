@@ -18,6 +18,11 @@ func TestValidateTitle(t *testing.T) {
 		{"titulo vazio", "", true},
 		{"titulo so espacos", "   \t ", true},
 		{"titulo longo", long, true},
+		// O limite e em caracteres, como no formulario: 200 letras acentuadas
+		// passam de 200 bytes e ainda assim cabem.
+		{"titulo acentuado no limite", strings.Repeat("ã", MaxTitleLen), false},
+		{"titulo com emoji no limite", strings.Repeat("🎮", MaxTitleLen), false},
+		{"titulo acentuado longo", strings.Repeat("ã", MaxTitleLen+1), true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -44,6 +49,17 @@ func TestValidateDescriptionTooLong(t *testing.T) {
 	rep := &Report{Title: "t", Description: strings.Repeat("a", MaxDescriptionLen+1)}
 	if err := rep.Validate(262144); err == nil {
 		t.Fatal("Validate() esperava erro com descricao longa")
+	}
+}
+
+func TestValidateDescriptionAcentuadaNoLimite(t *testing.T) {
+	rep := &Report{Title: "t", Description: strings.Repeat("é", MaxDescriptionLen)}
+	if err := rep.Validate(262144); err != nil {
+		t.Fatalf("Validate() error = %v, descricao no limite em caracteres deveria passar", err)
+	}
+	rep = &Report{Title: "t", Description: strings.Repeat("é", MaxDescriptionLen+1)}
+	if err := rep.Validate(262144); err == nil {
+		t.Fatal("Validate() esperava erro com descricao acima do limite em caracteres")
 	}
 }
 

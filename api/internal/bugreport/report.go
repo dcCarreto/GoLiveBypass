@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 const (
@@ -28,10 +29,12 @@ func (r *Report) Validate(maxLogBytes int64) error {
 	switch {
 	case r.Title == "":
 		return fmt.Errorf("title e obrigatorio")
-	case len(r.Title) > MaxTitleLen:
+	// Os clientes limitam em caracteres (maxlength/slice do JS); len() contaria
+	// bytes e recusaria um titulo acentuado que o formulario deixou passar.
+	case utf8.RuneCountInString(r.Title) > MaxTitleLen:
 		return fmt.Errorf("title deve ter no maximo %d caracteres", MaxTitleLen)
 	}
-	if len(r.Description) > MaxDescriptionLen {
+	if utf8.RuneCountInString(r.Description) > MaxDescriptionLen {
 		return fmt.Errorf("description deve ter no maximo %d caracteres", MaxDescriptionLen)
 	}
 	if int64(len(r.Log)) > maxLogBytes {

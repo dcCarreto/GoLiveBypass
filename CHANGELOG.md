@@ -10,6 +10,10 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **Experimento (desligado por padrão): abrir o Discord com `--disable-quic` no Windows.** Para separar uma das hipóteses do envio de arquivo que "carrega e some" (#368, #369, #370, #373), que aparece em rotas do México e some ao trocar de rota enquanto o log do WireSock mostra o túnel saudável. Com `"experimentalDesativarQuic": true` no `settings.json` (`%LOCALAPPDATA%\GoLiveBypass\settings.json`), a GUI passa `--disable-quic` ao Discord em toda abertura (ativação, troca de rota, reinício), forçando HTTP/2 sobre TCP em vez de HTTP/3 sobre UDP. Sem a chave, o Discord abre exatamente como antes. A lista de argumentos é fechada: só esse parâmetro, e só com o valor booleano `true` (nem `"true"`, nem `1`); nenhuma outra chave do `settings.json` vira argumento. O relatório ganha `discord_quic` (`padrao` ou `desativado_experimental`) para saber em qual condição cada relato foi gerado. Não é uma correção: é um teste para quem reproduz o travamento. Só vale onde a GUI abre o Discord pelo executável (Windows).
 
+### Corrigido
+
+- **API de relatos: título e descrição com acento não são mais recusados perto do limite.** Os formulários da GUI e do plugin limitam o título a 200 e a descrição a 8192 *caracteres*, mas a API conferia os mesmos números em *bytes*. Cada letra acentuada ocupa 2 bytes e um emoji 4, então um título de 200 caracteres em português tinha de 356 a 400 bytes: o relato passava no formulário e voltava com HTTP 400 ("title deve ter no maximo 200 caracteres"), e a pessoa perdia justamente o relato mais detalhado. A API agora conta caracteres, e tudo o que o formulário aceita a API aceita. O limite de 64 KB do corpo da issue continua em bytes.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado
