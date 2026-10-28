@@ -1102,7 +1102,8 @@ export function formatAllowedApps(paths: string[]): string {
     if (!unique.has(key)) unique.set(key, value);
   }
   const values = [...unique.values()];
-  if (values.length === 0) return "Discord, Discord.exe, Update.exe";
+  // Sem caminhos, so nomes do Discord: "Update.exe" casaria com atualizadores de outros apps.
+  if (values.length === 0) return "Discord, Discord.exe";
   return values.join(", ");
 }
 

@@ -1247,8 +1247,9 @@ function windowsAllowedAppPaths(installs: DiscordInstall[]): string[] {
     // contidos nele. A prova co-localizada abaixo valida exatamente esta regra.
     apps.add(path.dirname(path.resolve(install.exePath)));
     apps.add(path.basename(install.exePath));
+    // So o Update.exe desta instalacao: nome sem barra o WireSock casa por trecho do nome
+    // do processo, e "Update.exe" solto pegava o Squirrel de outros apps e *Update.exe.
     apps.add(path.join(path.dirname(path.dirname(install.exePath)), "Update.exe"));
-    apps.add("Update.exe");
   }
   // Controle da conta Proton usa a rede do host. Somente o probe copiado
   // para o diretorio do Discord acompanha a regra de tunel desse aplicativo.
