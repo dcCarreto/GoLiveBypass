@@ -1,6 +1,7 @@
 package bugreport
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -60,6 +61,52 @@ func TestValidateDescriptionAcentuadaNoLimite(t *testing.T) {
 	rep = &Report{Title: "t", Description: strings.Repeat("é", MaxDescriptionLen+1)}
 	if err := rep.Validate(262144); err == nil {
 		t.Fatal("Validate() esperava erro com descricao acima do limite em caracteres")
+	}
+}
+
+func TestValidateMeta(t *testing.T) {
+	campos := func(n, tamanhoValor int) map[string]string {
+		m := make(map[string]string, n)
+		for i := range n {
+			m[fmt.Sprintf("k%02d", i)] = strings.Repeat("v", tamanhoValor)
+		}
+		return m
+	}
+	tests := []struct {
+		name    string
+		meta    map[string]string
+		wantErr bool
+	}{
+		{"meta tipico", map[string]string{"versao": "2.0.13", "plataforma": "win32-x64"}, false},
+		{"campos no limite", campos(MaxMetaKeys, 10), false},
+		{"campos demais", campos(MaxMetaKeys+1, 1), true},
+		{"bytes no limite", map[string]string{"k": strings.Repeat("v", MaxMetaBytes-1)}, false},
+		{"bytes demais", map[string]string{"k": strings.Repeat("v", MaxMetaBytes)}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rep := &Report{Title: "t", Meta: tt.meta}
+			if err := rep.Validate(262144); (err != nil) != tt.wantErr {
+				t.Fatalf("Validate() error = %v, wantErr = %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestBuildIssueBodyPiorCasoCabeNoGitHub(t *testing.T) {
+	// Pior caso que Validate deixa passar: descricao no limite com runes de 4 bytes e
+	// meta no teto feito de "|" (o escape da tabela dobra). Tem de caber sem depender
+	// do corte do log.
+	meta := make(map[string]string, MaxMetaKeys)
+	porCampo := MaxMetaBytes / MaxMetaKeys
+	for i := range MaxMetaKeys {
+		k := fmt.Sprintf("%02d", i)
+		meta[k] = strings.Repeat("|", porCampo-len(k))
+	}
+	rep := &Report{Title: "t", Description: strings.Repeat("🎮", MaxDescriptionLen), Meta: meta}
+	body := BuildIssueBody(*rep)
+	if len(body) > MaxIssueBodyLen {
+		t.Fatalf("body com %d bytes, limite %d", len(body), MaxIssueBodyLen)
 	}
 }
 

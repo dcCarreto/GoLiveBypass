@@ -14,6 +14,11 @@ const (
 	// aqui (meta + descricao + log) precisa caber — corta-se o LOG por ultimo,
 	// preservando meta e descricao que sao o diagnostico essencial.
 	MaxIssueBodyLen = 64 * 1024
+	// Meta e uma tabela pequena de diagnostico (os clientes mandam ~35 campos curtos,
+	// 1-2 KB). Sem teto, meta + descricao passavam de MaxIssueBodyLen e o GitHub
+	// recusava a issue. 8 KB, mesmo com o escape de "|" dobrando, deixa folga.
+	MaxMetaKeys  = 64
+	MaxMetaBytes = 8 * 1024
 	// Cerca minima do log; cresce quando o log traz uma sequencia de crases maior.
 	logFence = "````"
 )
@@ -37,6 +42,16 @@ func (r *Report) Validate(maxLogBytes int64) error {
 	}
 	if utf8.RuneCountInString(r.Description) > MaxDescriptionLen {
 		return fmt.Errorf("description deve ter no maximo %d caracteres", MaxDescriptionLen)
+	}
+	if len(r.Meta) > MaxMetaKeys {
+		return fmt.Errorf("meta deve ter no maximo %d campos", MaxMetaKeys)
+	}
+	metaBytes := 0
+	for k, v := range r.Meta {
+		metaBytes += len(k) + len(v)
+	}
+	if metaBytes > MaxMetaBytes {
+		return fmt.Errorf("meta deve ter no maximo %d bytes", MaxMetaBytes)
 	}
 	if int64(len(r.Log)) > maxLogBytes {
 		r.Log = r.Log[:maxLogBytes]

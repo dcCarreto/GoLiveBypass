@@ -16,6 +16,8 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **API de relatos: o log anexado não escapa mais do bloco de código da issue.** O log vai dentro de uma cerca de crases e, para não fechá-la, a API trocava toda sequência de 4 crases por 3. Isso não cobria sequências maiores: uma linha com 5 crases virava 4 e fechava a cerca no meio do log, e o resto (links, imagens, títulos) passava a ser renderizado como Markdown na issue pública; 8 crases viravam 6, com o mesmo efeito. A cerca agora tem uma crase a mais que a maior sequência do log (no mínimo 4) e o log é publicado sem alteração.
 
+- **API de relatos: o campo `meta` ganhou teto, e a issue sempre cabe no limite do GitHub.** A validação limitava título, descrição e log, mas não o `meta`, e a rota aceita até 512 KB por requisição. Para caber nos 64 KB do GitHub o corpo só cortava o log, então um `meta` grande deixava a issue acima do limite: com 100 KB de `meta` o corpo saía com 102 KB, o GitHub recusava e a pessoa recebia "falha ao criar a issue no GitHub" (HTTP 502). Agora o `meta` aceita no máximo 64 campos e 8 KB somando chaves e valores; acima disso a API responde 400 com o motivo. Os clientes atuais mandam de 11 (plugin) a cerca de 35 (GUI) campos curtos, de 1 a 2 KB, e não são afetados.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado
