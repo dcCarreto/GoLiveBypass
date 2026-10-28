@@ -275,7 +275,7 @@ describe("WireSock no Windows", () => {
     expect(fn).not.toContain("proton.findProtonConfgenExe()");
     // Nome sem barra o WireSock casa por trecho do nome do processo: "Update.exe" solto
     // poria no tunel o Update.exe de Slack/Teams, MicrosoftEdgeUpdate.exe, GoogleUpdate.exe.
-    expect(fn).toContain('path.join(path.dirname(path.dirname(install.exePath)), "Update.exe")');
+    expect(fn).toContain("windowsSquirrelUpdaterPath(path.resolve(install.exePath))");
     expect(fn).not.toContain('apps.add("Update.exe")');
   });
 
