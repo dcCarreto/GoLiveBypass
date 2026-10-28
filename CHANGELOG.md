@@ -10,6 +10,10 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **Experimento (desligado por padrão): abrir o Discord com `--disable-quic` no Windows.** Para separar uma das hipóteses do envio de arquivo que "carrega e some" (#368, #369, #370, #373), que aparece em rotas do México e some ao trocar de rota enquanto o log do WireSock mostra o túnel saudável. Com `"experimentalDesativarQuic": true` no `settings.json` (`%LOCALAPPDATA%\GoLiveBypass\settings.json`), a GUI passa `--disable-quic` ao Discord em toda abertura (ativação, troca de rota, reinício), forçando HTTP/2 sobre TCP em vez de HTTP/3 sobre UDP. Sem a chave, o Discord abre exatamente como antes. A lista de argumentos é fechada: só esse parâmetro, e só com o valor booleano `true` (nem `"true"`, nem `1`); nenhuma outra chave do `settings.json` vira argumento. O relatório ganha `discord_quic` (`padrao` ou `desativado_experimental`) para saber em qual condição cada relato foi gerado. Não é uma correção: é um teste para quem reproduz o travamento. Só vale onde a GUI abre o Discord pelo executável (Windows).
 
+### Corrigido
+
+- **`proton-confgen`: a medição de velocidade não dá mais "infinito" no Windows.** A taxa de download e de upload era `bytes / duração`, e no Windows o relógio monotônico do Go tem resolução grossa: uma transferência rápida media 0 s e virava `+Inf` Mbps, que a seleção descarta como capacidade 0, ou seja, servidor inutilizável. Com servidor real isso é raro, mas acontecia sempre no teste local. As durações agora têm o mesmo piso de 1 ms que a latência já usava. Vale para GUI, plugin e macOS, que usam o mesmo helper.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado
