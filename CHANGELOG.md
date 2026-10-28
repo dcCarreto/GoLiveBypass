@@ -10,6 +10,10 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **Experimento (desligado por padrão): abrir o Discord com `--disable-quic` no Windows.** Para separar uma das hipóteses do envio de arquivo que "carrega e some" (#368, #369, #370, #373), que aparece em rotas do México e some ao trocar de rota enquanto o log do WireSock mostra o túnel saudável. Com `"experimentalDesativarQuic": true` no `settings.json` (`%LOCALAPPDATA%\GoLiveBypass\settings.json`), a GUI passa `--disable-quic` ao Discord em toda abertura (ativação, troca de rota, reinício), forçando HTTP/2 sobre TCP em vez de HTTP/3 sobre UDP. Sem a chave, o Discord abre exatamente como antes. A lista de argumentos é fechada: só esse parâmetro, e só com o valor booleano `true` (nem `"true"`, nem `1`); nenhuma outra chave do `settings.json` vira argumento. O relatório ganha `discord_quic` (`padrao` ou `desativado_experimental`) para saber em qual condição cada relato foi gerado. Não é uma correção: é um teste para quem reproduz o travamento. Só vale onde a GUI abre o Discord pelo executável (Windows).
 
+### Corrigido
+
+- **GUI Linux: acentos na saída do script não viram mais `�`.** A GUI lê a saída do script elevado (`--status --json`, `--probe`, ativação) convertendo cada pedaço do pipe para texto separadamente. Uma letra acentuada ocupa 2 bytes e, quando o pipe entregava esses bytes em leituras diferentes, cada metade virava `�`: um caminho como `/home/joão/.config` chegava como `/home/jo��o/.config`. O JSON continua válido, mas o caminho fica errado (ele vai, por exemplo, para o marcador de sessão usado na reversão da injeção), e as mensagens de progresso da ativação apareciam corrompidas. A leitura agora junta os bytes de um caractere entre leituras. A divisão depende de como o sistema entrega o pipe e é mais provável com saída grande ou com a GUI ocupada.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado
