@@ -16,6 +16,8 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **GUI Windows: o filtro do túnel não aponta mais para um `Update.exe` fora da pasta do Discord.** O `Update.exe` de cada instalação era calculado como "a pasta acima da pasta do executável". Para `Discord\app-<versão>\Discord.exe` isso dá `Discord\Update.exe`, o atualizador certo, mas para o iniciador de primeiro nível, `%LOCALAPPDATA%\Discord\Discord.exe`, que a descoberta também encontra, o resultado era `%LOCALAPPDATA%\Update.exe`: um caminho que não é do Discord e que qualquer programa sem privilégio poderia criar para entrar no túnel. O cálculo agora só sobe um nível quando a pasta é `app-*`.
 
+- **GUI e plugin no Windows: um `.conf` importado não pode mais pôr o computador inteiro na VPN.** O WireSock só lê a regra `#@ws:AllowedApps` dentro da seção `[Peer]`; em `[Interface]` ela é ignorada e o túnel vale para todos os programas. A GUI e o plugin substituíam no mesmo lugar uma regra que já viesse no arquivo e, sem ela, acrescentavam a regra no fim. Um perfil importado com `AllowedApps` em `[Interface]`, ou com `[Peer]` antes de `[Interface]` (ordem que o WireGuard aceita), terminava com a regra em `[Interface]`: o isolamento por aplicativo sumia sem aviso e todo o tráfego do PC passava a sair pela VPN. Agora qualquer `AllowedApps` do arquivo é descartado e a regra é escrita uma vez, no fim da primeira seção `[Peer]`. Conferido no WireSock 3.4.8.1 com um perfil que começa por `[Peer]`: com a configuração gerada pelo código antigo até um `curl` fora da regra entrou no túnel; com a nova, só o executável listado.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado
