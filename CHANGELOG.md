@@ -14,6 +14,8 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **Relatório de bug da GUI: um erro repetido não expulsa mais o contexto do log.** O buffer em memória (as 1000 linhas mais recentes, que vão no relatório) deveria juntar repetições seguidas numa linha `(xN)`, mas comparava a linha inteira, que começa pela hora: só juntava o que caía no mesmo segundo. Um erro repetido a cada poucos segundos ocupava uma linha por ocorrência e, em alguns minutos, empurrava para fora tudo o que tinha acontecido antes. A comparação agora ignora a hora, e a linha agrupada mostra a primeira e a última ocorrência: `[12:00:00] [error][net] socks.falha (x120, ate 12:01:59)`. O arquivo `gui.log` continua com todas as linhas.
 
+- **Relatório de bug da GUI: a sessão não aparece mais duas vezes no log anexado.** O relatório junta o buffer em memória com o trecho do `gui.log` anterior a ele, procurando no arquivo a primeira linha do buffer. Quando essa linha estava agrupada, o sufixo `(xN)` não existe no arquivo, a busca falhava e o relatório anexava o arquivo inteiro depois da sessão, repetindo tudo. O sufixo agora é ignorado nessa busca.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado

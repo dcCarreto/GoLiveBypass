@@ -178,6 +178,11 @@ export function getRecent(): string {
   return escolhidas.join("\n");
 }
 
+// Linha do getRecent() como foi gravada no arquivo (sem o sufixo de repeticao).
+export function semRepeticao(linha: string): string {
+  return linha.replace(/ \(x\d+(?:, ate \d{2}:\d{2}:\d{2})?\)$/, "");
+}
+
 // Uso exclusivo de testes: o estado e de modulo, cada teste recomeca do zero.
 export function _resetForTests() {
   ring.length = 0;
