@@ -14,6 +14,8 @@ segue [Semantic Versioning](https://semver.org/lang/pt-BR/).
 
 - **API de relatos: título e descrição com acento não são mais recusados perto do limite.** Os formulários da GUI e do plugin limitam o título a 200 e a descrição a 8192 *caracteres*, mas a API conferia os mesmos números em *bytes*. Cada letra acentuada ocupa 2 bytes e um emoji 4, então um título de 200 caracteres em português tinha de 356 a 400 bytes: o relato passava no formulário e voltava com HTTP 400 ("title deve ter no maximo 200 caracteres"), e a pessoa perdia justamente o relato mais detalhado. A API agora conta caracteres, e tudo o que o formulário aceita a API aceita. O limite de 64 KB do corpo da issue continua em bytes.
 
+- **API de relatos: o log anexado não escapa mais do bloco de código da issue.** O log vai dentro de uma cerca de crases e, para não fechá-la, a API trocava toda sequência de 4 crases por 3. Isso não cobria sequências maiores: uma linha com 5 crases virava 4 e fechava a cerca no meio do log, e o resto (links, imagens, títulos) passava a ser renderizado como Markdown na issue pública; 8 crases viravam 6, com o mesmo efeito. A cerca agora tem uma crase a mais que a maior sequência do log (no mínimo 4) e o log é publicado sem alteração.
+
 ## [2.0.13] - 2026-10-19
 
 ### Alterado

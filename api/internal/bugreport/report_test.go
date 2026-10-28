@@ -99,13 +99,17 @@ func TestBuildIssueBodyCompleto(t *testing.T) {
 }
 
 func TestBuildIssueBodyLogComFenceInterno(t *testing.T) {
-	rep := Report{Title: "t", Log: "inicio\n````\nmeio ``` fim"}
-	body := BuildIssueBody(rep)
-	if strings.Contains(body, logFence+"\n````") {
-		t.Error("fence interno de 4 backticks nao foi neutralizado")
-	}
-	if !strings.Contains(body, "meio ``` fim") {
-		t.Error("triple backtick original deve continuar intacto dentro do fence de 4")
+	// Qualquer sequencia de crases do log (3, 4, 5, 8) fica dentro de uma cerca
+	// maior, sem alterar o conteudo: nada do log escapa para o Markdown da issue.
+	for _, n := range []int{3, 4, 5, 8} {
+		crases := strings.Repeat("`", n)
+		log := "inicio\n" + crases + "\n[link](https://exemplo.invalid)\nmeio ``` fim"
+		body := BuildIssueBody(Report{Title: "t", Log: log})
+		fence := strings.Repeat("`", max(len(logFence), n+1))
+		want := "**Log:**\n\n" + fence + "\n" + log + "\n" + fence + "\n"
+		if !strings.HasSuffix(body, want) {
+			t.Errorf("log com %d crases: corpo %q, want sufixo %q", n, body, want)
+		}
 	}
 }
 

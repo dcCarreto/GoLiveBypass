@@ -14,7 +14,8 @@ const (
 	// aqui (meta + descricao + log) precisa caber — corta-se o LOG por ultimo,
 	// preservando meta e descricao que sao o diagnostico essencial.
 	MaxIssueBodyLen = 64 * 1024
-	logFence        = "````"
+	// Cerca minima do log; cresce quando o log traz uma sequencia de crases maior.
+	logFence = "````"
 )
 
 type Report struct {
@@ -67,13 +68,19 @@ func BuildIssueBody(r Report) string {
 	}
 
 	if l := r.Log; l != "" {
-		log := strings.ReplaceAll(l, logFence, "```")
+		log := l
+		// Uma cerca so fecha com uma linha de crases do mesmo tamanho ou maior; uma
+		// cerca mais longa que qualquer sequencia do log nunca fecha no meio dele.
+		fence := logFence
+		if n := maiorSequenciaDeCrases(log); n >= len(fence) {
+			fence = strings.Repeat("`", n+1)
+		}
 		prefixo := b.String()
-		const fenceBloco = "\n" + logFence + "\n"
+		fenceBloco := "\n" + fence + "\n"
 		const marcador = "\n[... log truncado no meio ...]\n"
 		// "**Log:**\n\n" + fence aberto + log + fence fechado — inclui o \n inicial
 		// e reserva espaco para o marcador de truncamento.
-		baseLen := len(prefixo) + len("\n**Log:**\n\n") + len(logFence) + len(fenceBloco) + len(marcador)
+		baseLen := len(prefixo) + len("\n**Log:**\n\n") + len(fence) + len(fenceBloco) + len(marcador)
 		sobra := MaxIssueBodyLen - baseLen
 		if sobra < 0 {
 			sobra = 0
@@ -98,11 +105,24 @@ func BuildIssueBody(r Report) string {
 			log = log[:cabeca] + marcador + log[inicioCauda:]
 		}
 		b.WriteString("**Log:**\n\n")
-		b.WriteString(logFence + "\n")
+		b.WriteString(fence + "\n")
 		b.WriteString(log)
 		b.WriteString(fenceBloco)
 	}
 	return b.String()
+}
+
+func maiorSequenciaDeCrases(s string) int {
+	maior, atual := 0, 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '`' {
+			atual++
+			maior = max(maior, atual)
+		} else {
+			atual = 0
+		}
+	}
+	return maior
 }
 
 func tableCell(s string) string {
