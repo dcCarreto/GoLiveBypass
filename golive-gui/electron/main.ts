@@ -32,7 +32,7 @@ import * as logsDir from "./logsDir";
 import { submitBugReport } from "./bugreport";
 import { ensureWireSockInstalled, listRunningImageNamesAsync, getWireSockAdapterTrafficNetshAsync, pingHostAsync, trafficSample, type TunnelStats, type WireSockAdapterTraffic, getWireSockConnectionStatus, getWireSockConnectionStatusAsync, getWireSockAdapterTraffic, getWireSockAdapterTrafficAsync, hasWireSockAdapterTrafficIncrease, isWireSockActive, isWireSockActiveAsync, startWireSockService, switchWireSockService, recoverWireSockNetwork, verifyWindowsNetwork, type WireSockConnectionStatus } from "./wiresock";
 import { classifyWgReadiness, getWgStats, getWgStatsAsync, iniciarWgStatsWatchdog, pararWgStatsWatchdog, type WgTunnelStats } from "./wgstats";
-import { classifyFailoverHealth, FailoverHealthTracker, FAILOVER_ROUTE_TIMEOUT_MS, FAILOVER_SAMPLE_INTERVAL_MS, routeCandidateUsable, routePoolDirectory, readRoutePoolManifest, makeRoutePoolManifest, routePoolMatches, ROUTE_POOL_RESERVE_COUNT, ROUTE_POOL_TOTAL, safeRoutePoolPath, writeRoutePoolManifest, type ProtonRouteMetadata, type ProtonRoutePoolManifest } from "./route-failover";
+import { automaticExcludedCountries, classifyFailoverHealth, FailoverHealthTracker, FAILOVER_ROUTE_TIMEOUT_MS, FAILOVER_SAMPLE_INTERVAL_MS, routeCandidateUsable, routePoolDirectory, readRoutePoolManifest, makeRoutePoolManifest, routePoolMatches, ROUTE_POOL_RESERVE_COUNT, ROUTE_POOL_TOTAL, safeRoutePoolPath, writeRoutePoolManifest, type ProtonRouteMetadata, type ProtonRoutePoolManifest } from "./route-failover";
 import { validateWgConfContent } from "./wg-validator";
 import * as proton from "./proton";
 import { ProtonOptimizationCoordinator } from "./proton-optimization";
@@ -1806,9 +1806,16 @@ function validProtonPoolReserves(manifest: ProtonRoutePoolManifest): ProtonRoute
   const poolDir = routePoolDirectory(settingsDir());
   const seen = new Set<string>();
   const valid: ProtonRouteMetadata[] = [];
+  // Reservas gravadas antes da exclusão automática não podem trazer de volta um país excluído.
+  const excludedCountries = automaticExcludedCountries({
+    countries: manifest.country,
+    freeOnly: manifest.freeOnly,
+    avoidFreeMexico: (readSharedSettings() as any).protonAvoidFreeMexico !== false,
+  }).split(",");
   for (const candidate of manifest.reserves) {
     const safe = safeRoutePoolPath(poolDir, candidate.confFile);
     if (!safe || !fs.existsSync(safe) || !routeCandidateUsable(candidate) || seen.has(candidate.server)) continue;
+    if (excludedCountries.includes(candidate.country)) continue;
     seen.add(candidate.server);
     valid.push({ ...candidate, confFile: safe });
   }
@@ -1904,6 +1911,7 @@ async function buildProtonRoutePoolNow(
       countries: typeof settings.protonCountry === "string" ? settings.protonCountry || undefined : undefined,
       freeOnly: true,
       autoPing: settings.protonAutoPing !== false,
+      avoidFreeMexico: settings.protonAvoidFreeMexico !== false,
       size: Math.max(1, Math.min(3, Math.floor(count))),
       excludeServers: [...excluded],
       signal: controller?.signal,
@@ -2693,6 +2701,7 @@ async function ensureProtonActivationProfile() {
     // response can expose paid tiers to the selector.
     freeOnly: plan.status !== "premium",
     autoPing: s.protonAutoPing !== false,
+    avoidFreeMexico: s.protonAvoidFreeMexico !== false,
     speedTest: false,
   });
   if (!gen.success) throw new Error(gen.error || "Não foi possível preparar uma rota ProtonVPN.");
@@ -2747,6 +2756,7 @@ async function optimizeProtonRouteAtStartup(
         countries: country || undefined,
         freeOnly,
         autoPing,
+        avoidFreeMexico: settings.protonAvoidFreeMexico !== false,
         speedTest: true,
         signal,
         onProgress: (progress) => {
@@ -4170,6 +4180,7 @@ ipcMain.handle("get-proton-settings", async () => {
     freeOnly: s.protonFreeOnly !== false,
     autoPing: s.protonAutoPing !== false,
     autoFailover: s.protonAutoFailover !== false,
+    avoidFreeMexico: s.protonAvoidFreeMexico !== false,
     routePreference: s.protonRoutePreference === "manual"
       ? "manual"
       : s.protonRoutePreference === "auto" ? "auto" : s.protonLastServer?.manual === true ? "manual" : "auto",
@@ -4191,9 +4202,10 @@ ipcMain.handle("set-proton-settings", async (_event, settings: any) => {
   const filterChanged = typeof settings?.username === "string" ||
     typeof settings?.country === "string" ||
     typeof settings?.freeOnly === "boolean" ||
-    typeof settings?.autoPing === "boolean";
+    typeof settings?.autoPing === "boolean" ||
+    typeof settings?.avoidFreeMexico === "boolean";
   if (filterChanged || settings?.autoFailover === false) stopProtonFailoverMonitor();
-  if (typeof settings?.username === "string" || typeof settings?.country === "string" || typeof settings?.freeOnly === "boolean" || typeof settings?.autoPing === "boolean") {
+  if (filterChanged) {
     clearProtonRoutePool();
   }
   const result = await withWireSockLifecycle("preferencias-proton", async () => {
@@ -4203,6 +4215,7 @@ ipcMain.handle("set-proton-settings", async (_event, settings: any) => {
     if (typeof settings?.freeOnly === "boolean") patch.protonFreeOnly = settings.freeOnly;
     if (typeof settings?.autoPing === "boolean") patch.protonAutoPing = settings.autoPing;
     if (typeof settings?.autoFailover === "boolean") patch.protonAutoFailover = settings.autoFailover;
+    if (typeof settings?.avoidFreeMexico === "boolean") patch.protonAvoidFreeMexico = settings.avoidFreeMexico;
     if (settings?.routePreference === "auto" || settings?.routePreference === "manual") {
       patch.protonRoutePreference = settings.routePreference;
       // Quem escolheu (aqui ou em Configuracoes) nao precisa mais da pergunta inicial.
@@ -4592,6 +4605,7 @@ ipcMain.handle("optimize-proton-route", async (event, options?: ProtonOptimizati
       // renderers but cannot accidentally unlock paid tiers.
       const freeOnly = plan.status !== "premium";
       const autoPing = options?.autoPing !== undefined ? options.autoPing : (s.protonAutoPing !== false);
+      const avoidFreeMexico = s.protonAvoidFreeMexico !== false;
 
       // A abertura/login deve confirmar a rota novamente quando o túnel está
       // inativo. O reaproveitamento continua disponível apenas para fluxos que
@@ -4599,13 +4613,13 @@ ipcMain.handle("optimize-proton-route", async (event, options?: ProtonOptimizati
       const previous = s.protonLastServer;
       const speedTest = options?.speedTest !== false;
       const refreshOnStartup = options?.refreshOnStartup === true;
-      if (!refreshOnStartup && options?.reuseMeasured && proton.canReuseMeasuredProfile(settingsDir(), previous, { username, country, freeOnly, autoPing })) {
+      if (!refreshOnStartup && options?.reuseMeasured && proton.canReuseMeasuredProfile(settingsDir(), previous, { username, country, freeOnly, autoPing, avoidFreeMexico })) {
         return { ...previous, success: true };
       }
       // Continuing without a new test keeps only a profile matching the current
       // account and filters; otherwise the helper performs its normal quick
       // selection and writes a fresh profile.
-      if (!speedTest && proton.canReuseMeasuredProfile(settingsDir(), previous, { username, country, freeOnly, autoPing })) {
+      if (!speedTest && proton.canReuseMeasuredProfile(settingsDir(), previous, { username, country, freeOnly, autoPing, avoidFreeMexico })) {
         return { ...previous, success: true };
       }
       if (speedTest) {
@@ -4665,6 +4679,7 @@ ipcMain.handle("optimize-proton-route", async (event, options?: ProtonOptimizati
           countries: country || undefined,
           freeOnly,
           autoPing,
+          avoidFreeMexico,
           speedTest,
           signal,
           onProgress: sendProgress,
